@@ -1,7 +1,12 @@
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """nginx_error_rate -- Munin plugin to report the error rate in an access log.
+
+The access log defaults to `/var/log/nginx/access.log`. This may be
+customized with the following stanza in your munin plugin conf:
+
+[nginx_error_rate]
+access_log /path/to/access.log
 """
 #%# family=auto
 #%# capabilities=autoconf
