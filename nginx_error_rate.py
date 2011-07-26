@@ -6,7 +6,7 @@ The access log defaults to `/var/log/nginx/access.log`. This may be
 customized with the following stanza in your munin plugin conf:
 
 [nginx_error_rate]
-access_log /path/to/access.log
+env.access_log /path/to/access.log
 """
 #%# family=auto
 #%# capabilities=autoconf
@@ -89,8 +89,8 @@ def main():
     avg_15m = sum(by_second_15m.itervalues()) / 900.0 if by_second_15m else 0.0
     avg_5m = sum(by_second_5m.itervalues()) / 300.0 if by_second_5m else 0.0
 
-    print "errors_15m", avg_15m
-    print "errors_5m", avg_5m
+    print "errors_15m.value", avg_15m
+    print "errors_5m.value", avg_5m
 
 
 def config():
