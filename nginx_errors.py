@@ -1,12 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
-"""nginx_error_rate -- Munin plugin to report the error rate in an access log.
-
-The access log defaults to `/var/log/nginx/access.log`. This may be
-customized with the following stanza in your munin plugin conf:
-
-[nginx_error_rate]
-env.access_log /path/to/access.log
+"""Python wrapper for Munin plugin reporting the number of errors in Nginx access log.
 """
 #%# family=auto
 #%# capabilities=autoconf
@@ -16,6 +10,8 @@ import datetime as dt
 import re
 from collections import deque, defaultdict
 
+
+GRAPH_TITLE = "Nginx errors"
 
 date_cp = re.compile(r'''
 \[
@@ -33,7 +29,10 @@ date_cp = re.compile(r'''
   \              # Space
   [^\]]+
 \]''', re.VERBOSE)
-error_cp = re.compile(r' (50[0-5]) ')
+
+error_cp = re.compile(r'" ([4,5][0-9][0-9]) ')
+
+counters = []
 
 month_num = {
     'Jan': 1,
@@ -51,12 +50,15 @@ month_num = {
     }
 
 
-def main():
+def values():
     error_lines = deque()
+    server_error_lines = deque()
+    client_error_lines = deque()
+
     access_log = os.path.abspath(os.path.expanduser(os.environ.get('access_log', '/var/log/nginx/access.log')))
     if not os.path.exists(access_log):
         return
-    
+
     with open(access_log) as fi:
         for line in fi:
             match = error_cp.search(line)
@@ -64,10 +66,8 @@ def main():
                 error_lines.append((match.group(1), line.strip()))
 
     now = dt.datetime.now()
-    d15m = now - dt.timedelta(minutes=15)
     d5m = now - dt.timedelta(minutes=5)
-    by_second_15m = defaultdict(lambda: 0)
-    by_second_5m = defaultdict(lambda: 0)
+
     for code, line in reversed(error_lines):
         match = date_cp.search(line)
         if match is not None:
@@ -80,34 +80,39 @@ def main():
                 int(data['minute'], base=10),
                 int(data['second'], base=10),
                 )
-            if date < d15m:
+
+            if date < d5m:
                 break
-            by_second_15m[date] += 1
-            if date >= d5m:
-                by_second_5m[date] += 1
 
-    avg_15m = sum(by_second_15m.itervalues()) / 900.0 if by_second_15m else 0.0
-    avg_5m = sum(by_second_5m.itervalues()) / 300.0 if by_second_5m else 0.0
+            for name, label, regex, by_second in counters:
 
-    print "errors_15m.value", avg_15m
-    print "errors_5m.value", avg_5m
+                match = regex.search(line)
+                if match is not None:
+                    by_second[date] += 1
+
+    for name, label, regex, by_second in counters:
+        print '%s.value' % name, sum(by_second.itervalues()) if by_second else 0
 
 
 def config():
-    print "graph_title Nginx error rate"
-    print "graph_category nginx"
-    print "graph_vlabel Errors per second"
-    print "errors_5m.label Errors per second over 5 minutes"
-    print "errors_15m.label Errors per second over 15 minutes"
+    print "graph_title", GRAPH_TITLE
+    print "graph_category webserver"
+    print "graph_vlabel Errors per 5 minutes"
+
+    for name, label, regex, by_second in counters:
+        print '%s.label' % name, label
 
 
-if __name__ == '__main__':
+def main():
     from optparse import OptionParser
     parser = OptionParser()
     (options, args) = parser.parse_args()
     if len(args) > 1:
         parser.error('Too many arguments.')
     elif len(args) < 1:
-        main()
+        values()
     elif args[0] == 'config':
         config()
+
+if __name__ == '__main__':
+    main()
