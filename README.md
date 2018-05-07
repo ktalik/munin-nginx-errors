@@ -32,13 +32,13 @@ ln -s /home/youruser/yourdir/nginx_server_errors.py /etc/munin/plugins/nginx_ser
 Add following lines in your Munin Node config file `/etc/munin/plugin-conf.d/munin-node`:
 
 ```
-[nginx_client_40x_err]
+[nginx_client_40x_errors]
 user root
 
-[nginx_client_other_err]
+[nginx_client_other_errors]
 user root
 
-[nginx_server_err]
+[nginx_server_errors]
 user root
 ```
 
